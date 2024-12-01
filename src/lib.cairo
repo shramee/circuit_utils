@@ -46,6 +46,17 @@ pub impl u384Serde of Serde<u384> {
     }
 }
 
+fn makeshift_deser(ref serialized: Span<felt252>) -> Option<u384> {
+    let [l0, l1] = (*serialized.multi_pop_front::<2>().unwrap()).unbox();
+    let limbs_01: u128 = l0.try_into().unwrap();
+    let limbs_23: u128 = l1.try_into().unwrap();
+
+    let (_limb1, limb0) = div_rem(limbs_01, NZ_POW96_TYPED);
+    let (_limb3, limb2) = div_rem(limbs_23, NZ_POW96_TYPED);
+
+    return Option::Some(u384 { limb0, limb1: 0, limb2, limb3: 0 });
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{u384Serde, u192, DivRemU192By96, makeshift_deser};
@@ -72,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn test_felt_into_u384_with_u256() {
+    fn test_u384_serde_with_u256() {
         let l0: u96 = 0x7dfd0ecbea960d0dca2b3f07;
         let l1: u96 = 0xfc753d9e59bf8e2b5aab76dc;
         let l2: u96 = 0x3cd0d53524febdb746ec2b73;
@@ -89,5 +100,26 @@ mod tests {
         assert(b.limb1 == l1, 'incorrect value');
         assert(b.limb2 == l2, 'incorrect value');
         assert(b.limb3 == l3, 'incorrect value');
+    }
+    #[test]
+    fn cost_u384_serde_with_u256() {
+        let mut span = [
+            0xfc753d9e59bf8e2b5aab76dc7dfd0ecbea960d0dca2b3f07, // contains first 2 u96
+            0x7df34f316f979409408f58473cd0d53524febdb746ec2b73, // // contains last 2 u96
+        ].span();
+
+        let _b: u384 = u384Serde::deserialize(ref span).unwrap();
+        assert(true, '')
+    }
+
+    #[test]
+    fn projected_cost_u384_serde_with_u196_assuming_equiv() {
+        let mut span = [
+            0xfc753d9e59bf8e2b5aab76dc7dfd0ecb, // contains first u96 and u32
+            0x7df34f316f979409408f58473cd0d535, // // contains last u96 and u32
+        ].span();
+
+        let _b: u384 = makeshift_deser(ref span).unwrap();
+        assert(true, '')
     }
 }
