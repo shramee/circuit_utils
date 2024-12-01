@@ -1,0 +1,10 @@
+[crate_roots]
+circuit_utils = "src"
+
+[config.global]
+version = "2.8.5"
+edition = "2023_10"
+
+[config.global.experimental_features]
+negative_impls = true
+coupons = true
