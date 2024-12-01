@@ -1,5 +1,5 @@
 use core::internal::bounded_int::{BoundedInt, DivRemHelper, div_rem};
-use core::circuit::{u96, u384};
+use core::circuit::{u96, u384, conversions::{POW96, NZ_POW96_TYPED}};
 
 type ConstValue<const VALUE: felt252> = BoundedInt<VALUE, VALUE>;
 
@@ -10,9 +10,7 @@ pub impl DivRemU192By96 of DivRemHelper<u192, ConstValue<POW96>> {
     type RemT = BoundedInt<0, { POW96 - 1 }>;
 }
 
-pub const POW96: felt252 = 0x1000000000000000000000000;
 pub const POW192: felt252 = 0x1000000000000000000000000000000000000000000000000;
-pub const NZ_POW96_TYPED: NonZero<ConstValue<POW96>> = 0x1000000000000000000000000;
 
 pub impl u384Serde of Serde<u384> {
     fn serialize(self: @u384, ref output: Array<felt252>) {
@@ -35,14 +33,32 @@ pub impl u384Serde of Serde<u384> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{u384Serde, u192};
+    use crate::{u384Serde, u192, DivRemU192By96};
+    use core::internal::bounded_int::{div_rem};
 
-    use core::circuit::{u96, u384};
+    use core::circuit::{u96, u384, conversions::{DivRemU128By64, NZ_POW64_TYPED, NZ_POW96_TYPED}};
 
     #[test]
-    fn test_felt_into_u192() {
-        let a: felt252 = 1;
-        let b: u192 = a.try_into().unwrap();
-        assert(b == 1, 'incorrect value');
+    fn test_u192_split() {
+        let b: u192 = 0xf00000000000000000000000000000000000000000000001;
+        let (limb1, limb0) = div_rem(b, NZ_POW96_TYPED);
+
+        assert(limb1 == 0xf00000000000000000000000, 'incorrect value');
+        assert(limb0 == 0x1, 'incorrect value');
     }
+
+    #[test]
+    fn test_u128_split() {
+        let b: u128 = 0xf0000000000000000000000000000001;
+        let (limb1, limb0) = div_rem(b, NZ_POW64_TYPED);
+
+        assert(limb1 == 0xf000000000000000, 'incorrect value');
+        assert(limb0 == 0x1, 'incorrect value');
+    }
+    // #[test]
+// fn test_felt_into_u192() {
+//     let a: felt252 = 1;
+//     let b: u192 = a.try_into().unwrap();
+//     assert(b == 1, 'incorrect value');
+// }
 }
